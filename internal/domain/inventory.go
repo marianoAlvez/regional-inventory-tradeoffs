@@ -15,7 +15,6 @@ const (
 	RegionA Region = "A"
 	RegionB Region = "B"
 	None    Region = "none"
-	witness Region = "C"
 )
 
 type Strategy string
@@ -81,17 +80,17 @@ type Outcome struct {
 	Regions     [2]RegionalOutcome
 }
 
-// confirmationBatch represents one-unit orders with the same origin and
-// durable placement. Its count is sufficient for this lab's aggregate report.
-type confirmationBatch struct {
-	quantity int
-	copies   []Region
+// regionalAllocation records a policy's decisions during the partition and
+// the replicas that hold its confirmed orders before any region is lost.
+type regionalAllocation struct {
+	outcome RegionalOutcome
+	copies  []Region
 }
 
-func (b confirmationBatch) surviving(loss Region) int {
-	for _, site := range b.copies {
+func (a regionalAllocation) surviving(loss Region) int {
+	for _, site := range a.copies {
 		if site != loss {
-			return b.quantity
+			return a.outcome.Confirmed
 		}
 	}
 	return 0
@@ -102,55 +101,17 @@ func Compare(s Scenario) ([2]Outcome, error) {
 	if err := s.Validate(); err != nil {
 		return [2]Outcome{}, err
 	}
-	return [2]Outcome{allocateByQuorum(s), allocateByQuota(s)}, nil
+	return [2]Outcome{
+		evaluate(s, Quorum, allocateByQuorum),
+		evaluate(s, Quota, allocateByQuota),
+	}, nil
 }
 
-func allocateByQuorum(s Scenario) Outcome {
-	regions := [2]RegionalOutcome{
-		allocateQuorumRegion(RegionA, s.DemandA, s.Stock, s.Majority),
-		allocateQuorumRegion(RegionB, s.DemandB, s.Stock, s.Majority),
-	}
-	// The fixture grants at most one selling region a majority. Its committed
-	// entries have a copy in that region and one in the third failure domain.
-	batch := confirmationBatch{
-		quantity: regions[0].Confirmed + regions[1].Confirmed,
-		copies:   []Region{s.Majority, witness},
-	}
-	return summarize(Quorum, s.Stock, regions, batch.surviving(s.Loss))
-}
-
-func allocateQuorumRegion(region Region, demand, stock int, majority Region) RegionalOutcome {
-	if region != majority {
-		return RegionalOutcome{Region: region, Pending: demand}
-	}
-	return allocateRegion(region, demand, stock)
-}
-
-func allocateByQuota(s Scenario) Outcome {
-	a := allocateRegion(RegionA, s.DemandA, s.QuotaA)
-	b := allocateRegion(RegionB, s.DemandB, s.Stock-s.QuotaA)
-	batchA := confirmationBatch{quantity: a.Confirmed, copies: []Region{RegionA}}
-	batchB := confirmationBatch{quantity: b.Confirmed, copies: []Region{RegionB}}
-	recoverable := batchA.surviving(s.Loss) + batchB.surviving(s.Loss)
-	outcome := summarize(Quota, s.Stock, [2]RegionalOutcome{a, b}, recoverable)
-	// At most this many denied orders could use the other region's unused quota.
-	outcome.Stranded = min(a.Rejected, b.Remaining) + min(b.Rejected, a.Remaining)
-	return outcome
-}
-
-func allocateRegion(region Region, demand, stock int) RegionalOutcome {
-	confirmed := min(demand, stock)
-	return RegionalOutcome{
-		Region:    region,
-		Confirmed: confirmed,
-		Rejected:  demand - confirmed,
-		Remaining: stock - confirmed,
-	}
-}
-
-func summarize(strategy Strategy, stock int, regions [2]RegionalOutcome, recoverable int) Outcome {
-	a, b := regions[0], regions[1]
+func evaluate(s Scenario, strategy Strategy, policy allocationPolicy) Outcome {
+	regions := policy(s)
+	a, b := regions[0].outcome, regions[1].outcome
 	confirmed := a.Confirmed + b.Confirmed
+	recoverable := regions[0].surviving(s.Loss) + regions[1].surviving(s.Loss)
 	return Outcome{
 		Strategy:    strategy,
 		Confirmed:   confirmed,
@@ -158,7 +119,8 @@ func summarize(strategy Strategy, stock int, regions [2]RegionalOutcome, recover
 		Rejected:    a.Rejected + b.Rejected,
 		Recoverable: recoverable,
 		Lost:        confirmed - recoverable,
-		Remaining:   stock - confirmed,
-		Regions:     regions,
+		Remaining:   s.Stock - confirmed,
+		Stranded:    min(a.Rejected, b.Remaining) + min(b.Rejected, a.Remaining),
+		Regions:     [2]RegionalOutcome{a, b},
 	}
 }

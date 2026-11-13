@@ -44,11 +44,16 @@ Navegador y TypeScript → adaptador WebAssembly ┐
 Entrada JSON en terminal → adaptador CLI      ┘
 ```
 
-El dominio desconoce JSON, la terminal y el navegador. El caso de uso compara ambas políticas sobre la misma entrada. El binario WebAssembly permite que la demo pública ejecute el mismo Go que el CLI y las pruebas, con hospedaje estático y sin un proceso servidor. TypeScript mantiene formularios y presentación fuera del dominio. La separación hexagonal se aplica en las fronteras que efectivamente cambian.
+**Strategy.** Quórum y cupos son funciones Go del mismo tipo. Cada una decide qué pedidos confirma y dónde guarda los registros. Un evaluador aplica a ambas el mismo cálculo de stock, pedidos y recuperación. Así, una diferencia en la comparación viene de la política y sus copias durables.
+
+**Puertos y adaptadores.** El caso de uso `application.Simulate` es el punto de entrada común. La terminal y WebAssembly adaptan su entrada al mismo contrato. El dominio desconoce JSON, la terminal y el navegador. TypeScript presenta el resultado y el hospedaje estático ejecuta el mismo Go que las pruebas. [Arquitectura hexagonal de Alistair Cockburn](https://alistair.cockburn.us/hexagonal-architecture/)
+
+**Derechos de venta preasignados.** La política de cupos usa una variante fija de la idea de escrow. Divide el stock antes de la partición para que cada región pueda vender localmente hasta su límite. La confirmación queda en esa región durante la ventana simulada. [Trabajo original sobre escrow de Patrick O’Neil](https://ics.uci.edu/~cs223/papers/p405-o_neil.pdf)
 
 | Para revisar | Archivo |
 | --- | --- |
-| Qué confirma cada política y dónde queda una copia durable | [Dominio en Go](internal/domain/inventory.go) |
+| Qué confirma cada política y dónde queda una copia durable | [Estrategias en Go](internal/domain/policies.go) |
+| Cómo se contabilizan los pedidos y qué se recupera al perder una región | [Evaluador común](internal/domain/inventory.go) |
 | Cómo se convierte el resultado en una comparación y una secuencia de eventos | [Caso de uso](internal/application/simulate.go) |
 | Cómo terminal y navegador invocan el mismo caso de uso | [CLI](cmd/inventory/main.go) y [adaptador WebAssembly](cmd/wasm/main.go) |
 | Cómo la demo presenta el resultado | [Interfaz TypeScript](web/src/main.ts) |

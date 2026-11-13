@@ -1,6 +1,6 @@
 # Requisitos técnicos
 
-El dominio Go mantiene la política de inventario y los estados. La aplicación evalúa ambos diseños sobre una entrada y produce una comparación determinista. CLI y WebAssembly adaptan JSON al mismo caso de uso. La interfaz TypeScript no calcula los resultados de negocio.
+El dominio Go aplica Strategy con dos funciones de asignación. Cada política decide qué pedidos confirma y dónde guarda los registros. Un evaluador calcula con las mismas reglas el stock, los pedidos y la recuperación. La aplicación convierte esos resultados en una comparación determinista. CLI y WebAssembly adaptan JSON al mismo caso de uso. La interfaz TypeScript presenta el resultado.
 
 Se eligió WebAssembly para ejecutar Go desde una demo estática sin servidor. El costo de descargar el runtime y el binario se acepta a cambio de compartir la implementación verificada. No hay persistencia, dependencias externas del dominio ni servicios de clientes.
 
