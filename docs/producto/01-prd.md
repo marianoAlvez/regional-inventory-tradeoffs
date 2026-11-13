@@ -1,5 +1,7 @@
 # Requisitos de producto
 
+Para ver qué hace el proyecto y probarlo en un minuto, empezá por el [README](../../README.md).
+
 Un visitante evalúa si un comercio ficticio debe confirmar pedidos por quórum o con cupos por región. El resultado esperado es que pueda identificar la garantía que se pierde al cambiar la política.
 
 | ID | Requisito | Aceptación |

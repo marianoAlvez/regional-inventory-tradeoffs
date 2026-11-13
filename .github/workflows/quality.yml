@@ -28,6 +28,8 @@ jobs:
       - run: npm ci --prefix web
       - run: node scripts/build.mjs
       - run: node scripts/check-wasm.mjs
+      - run: npm exec --prefix web -- playwright install --with-deps chromium
+      - run: node --test web/test/demo.test.mjs
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         with:

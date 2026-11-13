@@ -235,6 +235,7 @@ function readScenario(): Scenario {
 }
 
 function showError(message: string): void {
+  report.hidden = true;
   error.textContent = message;
   error.hidden = false;
 }

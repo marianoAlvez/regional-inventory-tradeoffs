@@ -28,7 +28,7 @@
         <div class="hero-copy">
           <p class="eyebrow">Sistemas distribuidos</p>
           <h1 id="page-title">Inventario multirregión</h1>
-          <p class="intro">Dos regiones venden el mismo stock. La red se divide. Compará cuántas ventas podés confirmar y cuáles sobreviven si después perdés una región.</p>
+          <p class="intro">Dos tiendas venden el mismo producto desde regiones distintas. Si se corta la comunicación entre ellas, ¿qué pedidos pueden confirmar y qué comprobantes quedan disponibles si una región se pierde?</p>
         </div>
         <figure class="topology" aria-label="Topología del escenario aplicado">
           <div class="topology-heading">
@@ -48,6 +48,7 @@
     <div class="wrap workspace" id="simulador">
       <section class="controls" aria-labelledby="scenario-title">
         <h2 id="scenario-title">Escenario</h2>
+        <p class="scenario-guide">Probá <strong>Pérdida de B</strong>. Llegan 40 pedidos a A y 60 a B. Compará cuántos reciben confirmación durante el corte y cuántas confirmaciones se pueden recuperar después.</p>
         <div class="presets" role="group" aria-label="Escenarios predefinidos">
           <button type="button" class="preset" data-preset="skewed" aria-pressed="true" disabled>Demanda sesgada</button>
           <button type="button" class="preset" data-preset="isolated" aria-pressed="false" disabled>Sin mayoría</button>
@@ -71,7 +72,7 @@
               <option value="none">Ninguna región</option>
             </select>
           </label>
-          <p class="field-note" id="majority-help">Confirmar por quórum requiere 2 de 3 réplicas.</p>
+          <p class="field-note" id="majority-help">Con quórum, una venta se confirma cuando el registro queda guardado en 2 de las 3 réplicas.</p>
           <label for="loss">Pérdida permanente posterior
             <select id="loss">
               <option value="none" selected>Ninguna región</option>
@@ -108,7 +109,7 @@
         <ul>
           <li>Cada pedido representa una unidad de un único producto. El stock, los pedidos y las regiones son ficticios.</li>
           <li>Primero se divide la red y llegan los pedidos. Después puede perderse una región de venta de forma permanente. El modelo observa los registros de pedidos confirmados que pueden recuperarse al reconectar las réplicas supervivientes.</li>
-          <li>El quórum modela un commit con dos copias durables y autoridad de escritura única. Los cupos se asignan antes de la partición y cada confirmación queda en su región durante la ventana simulada.</li>
+          <li>El quórum modela un commit con dos copias durables y autoridad de escritura única. El tercer sitio C guarda una copia de los datos. Los cupos se asignan antes de la partición y cada confirmación queda en su región durante la ventana simulada.</li>
           <li>El stock libre y el cupo inmovilizado se calculan antes de la pérdida regional. Se inmoviliza cupo si hay rechazos en una región mientras quedan unidades en la otra.</li>
         </ul>
       </details>

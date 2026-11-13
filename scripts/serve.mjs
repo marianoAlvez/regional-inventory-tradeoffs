@@ -11,7 +11,7 @@ const assets = new Map([
 ]);
 
 const port = Number(process.argv[2] ?? 4173);
-createServer((request, response) => {
+const server = createServer((request, response) => {
   const asset = assets.get(request.url);
   if (!asset) {
     response.writeHead(404).end();
@@ -24,6 +24,7 @@ createServer((request, response) => {
     response.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-store' });
     stream.pipe(response);
   });
-}).listen(port, '127.0.0.1', () => {
-  console.log(`Demo en http://127.0.0.1:${port}/`);
+});
+server.listen(port, '127.0.0.1', () => {
+  console.log(`Demo en http://127.0.0.1:${server.address().port}/`);
 });

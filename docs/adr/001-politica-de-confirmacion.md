@@ -18,7 +18,7 @@ La decisión inicial para este negocio ficticio es confirmar por quórum porque 
 | Escenario | Quórum | Cupos |
 | --- | --- | --- |
 | Mayoría en A, demanda 90/10, cupos 60/60 | 90 confirmaciones y 10 pendientes | 70 confirmaciones y 30 rechazos, aunque hay stock disponible en B |
-| Sin mayoría, demanda 50/40, cupos 60/60 | 0 confirmaciones y 90 pendientes | 90 confirmaciones locales |
+| Sin mayoría, demanda 40/40, cupos 60/60 | 0 confirmaciones y 80 pendientes | 80 confirmaciones locales |
 | Tras el primer caso se pierde A | 90 confirmaciones recuperables después de restablecer mayoría | 10 recuperables y 60 registros irrecuperables |
 
 El costo de disponibilidad se mide con los pedidos pendientes y rechazados. El costo de durabilidad se mide con los registros confirmados irrecuperables. La demo también muestra stock inaccesible por cupo: demanda rechazada en una región que podría satisfacerse con unidades libres de la otra.

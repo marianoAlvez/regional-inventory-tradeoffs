@@ -2,9 +2,17 @@
 
 **Arquitectura de software · Go, WebAssembly y TypeScript**
 
-¿Qué pedidos conviene dejar pendientes durante una partición para proteger el inventario y las confirmaciones? Este laboratorio aplica dos políticas a los mismos pedidos y luego simula la pérdida de una región de venta.
+Una tienda vende el mismo producto desde dos regiones. Cuando se corta la comunicación, tiene que decidir qué compradores reciben una confirmación y qué pedidos quedan pendientes. La demo compara dos formas de tomar esa decisión con el mismo stock y los mismos pedidos.
 
 **[Abrir demo pública](https://marianoalvez.github.io/regional-inventory-tradeoffs/)** · **[Leer la decisión de arquitectura](docs/adr/001-politica-de-confirmacion.md)** · **[Ver las ejecuciones de CI](https://github.com/marianoAlvez/regional-inventory-tradeoffs/actions/workflows/quality.yml)**
+
+## Probalo en un minuto
+
+1. Abrí la demo y elegí **Pérdida de B**. Hay 120 unidades y llegan 40 pedidos a A y 60 a B. Durante el corte, solo A puede guardar confirmaciones en dos de las tres réplicas.
+2. **Quórum** confirma 40 pedidos y deja 60 pendientes. Cuando B se pierde, las 40 confirmaciones siguen recuperables.
+3. **Cupos regionales** confirma los 100 pedidos. Las 60 confirmaciones guardadas solo en B quedan irrecuperables cuando esa región se pierde.
+
+En ese escenario, los cupos confirman 60 pedidos más durante el corte. El quórum protege todas las confirmaciones que llega a dar. El [ADR](docs/adr/001-politica-de-confirmacion.md) explica qué elegiría el negocio ficticio y qué tendría que cambiar para reconsiderarlo.
 
 ## El caso
 
@@ -38,7 +46,25 @@ Entrada JSON en terminal → adaptador CLI      ┘
 
 El dominio desconoce JSON, la terminal y el navegador. El caso de uso compara ambas políticas sobre la misma entrada. El binario WebAssembly permite que la demo pública ejecute el mismo Go que el CLI y las pruebas, con hospedaje estático y sin un proceso servidor. TypeScript mantiene formularios y presentación fuera del dominio. La separación hexagonal se aplica en las fronteras que efectivamente cambian.
 
-**Alcance del modelo.** Hay dos regiones de venta, un tercer dominio de réplica para quórum y tres fases: asignación inicial, demanda durante la partición y pérdida posterior de hasta una región. La entrada indica qué región tiene acceso a mayoría. El modelo parte de la garantía de commit por consenso y comprueba sus consecuencias sobre pedidos. No mide latencia, no implementa Raft, elecciones ni replicación real. Las cifras son ficticias.
+| Para revisar | Archivo |
+| --- | --- |
+| Qué confirma cada política y dónde queda una copia durable | [Dominio en Go](internal/domain/inventory.go) |
+| Cómo se convierte el resultado en una comparación y una secuencia de eventos | [Caso de uso](internal/application/simulate.go) |
+| Cómo terminal y navegador invocan el mismo caso de uso | [CLI](cmd/inventory/main.go) y [adaptador WebAssembly](cmd/wasm/main.go) |
+| Cómo la demo presenta el resultado | [Interfaz TypeScript](web/src/main.ts) |
+
+El simulador usa datos ficticios y tres fases: asignación inicial, pedidos durante el corte y pérdida posterior de una región de venta. Presupone un commit durable por consenso con dos de tres réplicas y modela sus consecuencias sobre los pedidos. La réplica C guarda una copia de las confirmaciones. Elección de líder, replicación real, latencia y recuperación de pedidos pendientes quedan fuera del modelo.
+
+## Cómo se probó
+
+| Prueba | Qué verifica |
+| --- | --- |
+| [Dominio](internal/domain/inventory_test.go) | Dos escenarios con resultados calculados de antemano, simetría al intercambiar regiones y 6.615 combinaciones de stock, cupos, demanda y fallas. Comprueba el límite del stock y la conservación de pedidos entre estados. |
+| [Validación JSON](internal/adapter/jsoninput/simulate_test.go) | Rechaza campos obligatorios ausentes, cantidades inválidas, regiones desconocidas y entradas demasiado grandes. |
+| [Paridad CLI y WebAssembly](scripts/check-wasm.mjs) | Compara la respuesta completa de los dos adaptadores en tres escenarios y comprueba cifras concretas para la pérdida de A. |
+| [Navegador Chromium](web/test/demo.test.mjs) | Ejecuta la demo con el binario Go, comprueba las cifras de los tres escenarios, cambia la región perdida y prueba cupos inválidos y fallas del motor. También comprueba la vista móvil y el uso de un preset con teclado. |
+
+GitHub Actions ejecuta estas pruebas y publica la demo solo después de que pasan. [Ver historial de CI](https://github.com/marianoAlvez/regional-inventory-tradeoffs/actions/workflows/quality.yml)
 
 ## Reproducir
 
@@ -47,14 +73,26 @@ Requisitos locales: Go 1.24 o posterior y Node.js 24 con npm.
 ```powershell
 Get-Content -Raw examples/regional-loss.json | go run ./cmd/inventory
 go vet ./...
-go test -race ./...
+go test ./...
 npm ci --prefix web
 node scripts/build.mjs
 node scripts/check-wasm.mjs
+```
+
+Para ejecutar las pruebas de navegador desde el mismo directorio:
+
+```powershell
+npm exec --prefix web -- playwright install chromium
+node --test web/test/demo.test.mjs
+```
+
+Para abrir una copia local:
+
+```powershell
 node scripts/serve.mjs
 ```
 
-Abrí `http://127.0.0.1:4173/`. En Linux/macOS, el comando CLI equivalente es `go run ./cmd/inventory < examples/regional-loss.json`. Si la instalación local de Go en Windows carece del compilador C requerido por el detector de carreras, ejecutá `go test ./...`. Las pruebas verifican invariantes de inventario y demanda en 6.615 combinaciones acotadas. CI ejecuta el detector en Linux y compara la respuesta del motor WebAssembly con la del CLI antes de publicar.
+Abrí `http://127.0.0.1:4173/`. En Linux/macOS, el comando CLI equivalente es `go run ./cmd/inventory < examples/regional-loss.json`. CI usa `go test -race -cover ./...` en Linux.
 
 ## Documentación
 

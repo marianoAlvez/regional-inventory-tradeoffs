@@ -6,6 +6,7 @@
     "build": "tsc --project tsconfig.json"
   },
   "devDependencies": {
+    "playwright": "1.61.1",
     "typescript": "5.9.3"
   }
 }
