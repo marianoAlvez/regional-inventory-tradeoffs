@@ -1,0 +1,8 @@
+/dist/
+/web/dist/
+/web/node_modules/
+*.exe
+*.wasm
+*.out
+.env
+.DS_Store

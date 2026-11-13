@@ -1,0 +1,8 @@
+{
+  "stock": 120,
+  "quotaA": 60,
+  "demandA": 90,
+  "demandB": 10,
+  "majority": "A",
+  "loss": "A"
+}

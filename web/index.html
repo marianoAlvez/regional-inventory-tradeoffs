@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10243a">
+  <meta name="description" content="Compará quórum y cupos regionales al vender un inventario finito durante una partición y la pérdida de una región.">
+  <title>Inventario multirregión · Laboratorio de arquitectura</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./wasm_exec.js" defer></script>
+  <script src="./main.js" type="module"></script>
+</head>
+<body>
+  <a class="skip-link" href="#simulador">Ir al simulador</a>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./" aria-label="Inicio del laboratorio de arquitectura">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>Laboratorio de arquitectura</span>
+      </a>
+      <a class="source-link" href="https://github.com/marianoAlvez/regional-inventory-tradeoffs/blob/main/docs/adr/001-politica-de-confirmacion.md">Decisión técnica ↗</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="page-title">
+      <div class="wrap hero-layout">
+        <div class="hero-copy">
+          <p class="eyebrow">Sistemas distribuidos</p>
+          <h1 id="page-title">Inventario multirregión</h1>
+          <p class="intro">Dos regiones venden el mismo stock. La red se divide. Compará cuántas ventas podés confirmar y cuáles sobreviven si después perdés una región.</p>
+        </div>
+        <figure class="topology" aria-label="Topología del escenario aplicado">
+          <div class="topology-heading">
+            <span>Topología del escenario</span>
+            <strong>Red particionada</strong>
+          </div>
+          <div class="network" aria-hidden="true">
+            <div class="node" data-node="A"><span class="node-icon">A</span><div><b>Región A</b><small id="node-a-state">—</small></div></div>
+            <div class="network-cut"><span></span><b>×</b><span></span></div>
+            <div class="node" data-node="B"><span class="node-icon">B</span><div><b>Región B</b><small id="node-b-state">—</small></div></div>
+          </div>
+          <figcaption id="topology-caption">El escenario se carga al iniciar el simulador.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <div class="wrap workspace" id="simulador">
+      <section class="controls" aria-labelledby="scenario-title">
+        <h2 id="scenario-title">Escenario</h2>
+        <div class="presets" role="group" aria-label="Escenarios predefinidos">
+          <button type="button" class="preset" data-preset="skewed" aria-pressed="true" disabled>Demanda sesgada</button>
+          <button type="button" class="preset" data-preset="isolated" aria-pressed="false" disabled>Sin mayoría</button>
+          <button type="button" class="preset" data-preset="lost" aria-pressed="false" disabled>Pérdida de B</button>
+        </div>
+
+        <form id="scenario-form">
+          <div class="field-grid">
+            <label for="stock">Stock total<input id="stock" type="number" value="120" min="0" max="1000000" step="1" required></label>
+            <label for="quota-a">Cupo de A<input id="quota-a" type="number" value="60" min="0" max="120" step="1" aria-describedby="quota-help" required></label>
+          </div>
+          <p class="field-note" id="quota-help">Cupo de B <output id="quota-b" for="stock quota-a">60</output></p>
+          <div class="field-grid">
+            <label for="demand-a">Pedidos en A<input id="demand-a" type="number" value="90" min="0" max="1000000" step="1" required></label>
+            <label for="demand-b">Pedidos en B<input id="demand-b" type="number" value="10" min="0" max="1000000" step="1" required></label>
+          </div>
+          <label for="majority">Mayoría durante la partición
+            <select id="majority" aria-describedby="majority-help">
+              <option value="A" selected>Región A + réplica C</option>
+              <option value="B">Región B + réplica C</option>
+              <option value="none">Ninguna región</option>
+            </select>
+          </label>
+          <p class="field-note" id="majority-help">Confirmar por quórum requiere 2 de 3 réplicas.</p>
+          <label for="loss">Pérdida permanente posterior
+            <select id="loss">
+              <option value="none" selected>Ninguna región</option>
+              <option value="A">Región A</option>
+              <option value="B">Región B</option>
+            </select>
+          </label>
+          <button class="run-button" id="run-button" type="submit" disabled>Simular escenario <span aria-hidden="true">→</span></button>
+        </form>
+      </section>
+
+      <section class="results" aria-labelledby="results-title">
+        <div class="results-header">
+          <h2 id="results-title">Comparación</h2>
+          <p class="status" id="status" role="status">Cargando simulador…</p>
+        </div>
+        <p class="error" id="error" role="alert" hidden></p>
+        <div id="report" hidden>
+          <p class="takeaway" id="takeaway"></p>
+          <ul class="legend" aria-label="Estados de pedidos">
+            <li><i class="dot confirmed"></i> Confirmados</li>
+            <li><i class="dot pending"></i> Pendientes</li>
+            <li><i class="dot rejected"></i> Rechazados</li>
+          </ul>
+          <div class="strategy-grid" id="strategies"></div>
+          <p class="result-note">Una intención pendiente espera una respuesta y no reserva stock. Los registros perdidos corresponden a pedidos que ya habían sido confirmados.</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="model wrap" aria-labelledby="model-title">
+      <details>
+        <summary id="model-title">Supuestos del modelo</summary>
+        <ul>
+          <li>Cada pedido representa una unidad de un único producto. El stock, los pedidos y las regiones son ficticios.</li>
+          <li>Primero se divide la red y llegan los pedidos. Después puede perderse una región de venta de forma permanente. El modelo observa los registros de pedidos confirmados que pueden recuperarse al reconectar las réplicas supervivientes.</li>
+          <li>El quórum modela un commit con dos copias durables y autoridad de escritura única. Los cupos se asignan antes de la partición y cada confirmación queda en su región durante la ventana simulada.</li>
+          <li>El stock libre y el cupo inmovilizado se calculan antes de la pérdida regional. Se inmoviliza cupo si hay rechazos en una región mientras quedan unidades en la otra.</li>
+        </ul>
+      </details>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <span>Mariano Alvez</span>
+    <span>Simulación en Go · Interfaz en TypeScript</span>
+    <a href="https://github.com/marianoAlvez/regional-inventory-tradeoffs">Repositorio público ↗</a>
+  </footer>
+  <noscript><p class="wrap error">Activá JavaScript para ejecutar el modelo Go en el navegador.</p></noscript>
+</body>
+</html>
